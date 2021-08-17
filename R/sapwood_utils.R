@@ -8,6 +8,7 @@ library(moments)
 library(Hmisc)
 library(broom)
 library(mosaic)
+library(stringr)
 
 theme_set(theme_classic(base_size = 12) + theme(legend.position = "none"))#, text = element_text(size=10, family="LM Roman 10")))
 
@@ -318,19 +319,32 @@ sapwood_fit_raw <- function(formula = as.formula("S~H"),
     out
 }
 
+#' @export
 AIC.sapwood_fit <- function(object,...) {
     object$AIC
 }
 
+#' @export
 predict.sapwood_fit <- function(object, ...) {
     object$predictions
 }
 
+#' @export
 residuals.sapwood_fit <- function(object,...) {
     object$residuals
 }
 
-print.sapwood_fit <- function(object) {
+#' @export
+print.sapwood_fit <- function(object,...) {
+    cat(paste0(" ",class(object), " - Call:\n\n"),
+        if_else(object$type == "parabolic_linear", "Linear-parabolic model (no mean TRW), Model 2\n\n",
+                if_else(object$type == "linear", "Linear model (no mean TRW), Model 3\n\n",
+                        "Linear-parabolic model, using mean TRW, Model 1\n\n")),
+        paste(deparse(object$formula), collapse = "\n"))
+}
+
+#' @export
+summary.sapwood_fit <- function(object,...) {
     cat(paste0(" ",class(object), " - Call:\n\n"),
         if_else(object$type == "parabolic_linear", "Linear-parabolic model (no mean TRW), Model 2\n\n",
                 if_else(object$type == "linear", "Linear model (no mean TRW), Model 3\n\n",
@@ -342,9 +356,9 @@ print.sapwood_fit <- function(object) {
         "\n\n",
         "Coefficients:\n")
     print(object$parameter_CI)
-
 }
 
+#' @export
 plot.sapwood_fit <- function(object, type='fit', xlim=NULL, ylim=NULL, prediction=T, confidence=F) {
     if(object$type == "parabolic_linear_W")
         stop("Not possible to plot model, use type='parabolic_linear' or type='linear' instead.")

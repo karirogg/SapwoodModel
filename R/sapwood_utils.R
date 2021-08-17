@@ -10,8 +10,6 @@ library(broom)
 library(mosaic)
 library(stringr)
 
-theme_set(theme_classic(base_size = 12) + theme(legend.position = "none"))#, text = element_text(size=10, family="LM Roman 10")))
-
 # Fit function for main model
 log_parabolic_estimate <- function(theta, H, H_0, Z) {
     theta_0 <- theta[1][[1]]
@@ -315,6 +313,7 @@ sapwood_fit_raw <- function(formula = as.formula("S~H"),
     out$formula <- formula
     out$type <- type
     out$alpha <- alpha
+    out$data <- dat
 
     out
 }
@@ -324,6 +323,11 @@ AIC.sapwood_fit <- function(object,...) {
     object$AIC
 }
 
+#' Prediction for sapwood rings
+#'
+#' Obtain predictions for a model of type 'sapwood_fit',
+#' including prediction and confidence intervals (for \code{sapwood_fit_l} and \code{sapwood_fit_pl}).
+#' For an object resulted in a \code{sapwood_fit_plw} call, only prediction median is included.
 #' @export
 predict.sapwood_fit <- function(object, ...) {
     object$predictions
@@ -343,6 +347,11 @@ print.sapwood_fit <- function(object,...) {
         paste(deparse(object$formula), collapse = "\n"))
 }
 
+#' Summary method for sapwood fits
+#'
+#' \code{summary} method for class "sapwood_fit"
+#'
+#' @param object an object of class "sapwood_fit", a result from a call to \code{sapwood_fit_l}, \code{sapwood_fit_pl} or \code{sapwood_fit_plw}.
 #' @export
 summary.sapwood_fit <- function(object,...) {
     cat(paste0(" ",class(object), " - Call:\n\n"),
@@ -358,12 +367,35 @@ summary.sapwood_fit <- function(object,...) {
     print(object$parameter_CI)
 }
 
+#' Plot method for sapwood models
+#'
+#' Visualize sapwood model.
+#'
+#' @param object an object of class "sapwood_fit", a result from a call to \code{sapwood_fit_l}, \code{sapwood_fit_pl} or \code{sapwood_fit_plw}.
+#' @param type Type of plot. Possible types are:
+#' \itemize{
+#' \item{"fit"}{Plots sapwood rings versus heartwood rings and the best fit, including prediction and/or confidence intervals for the median (if wanted). Not available for an object of type "parabolic_linear_W' (result from \code{sapwood_fit_plw})}
+#' \item{"residual"}{Plots standardized residuals on log scale of the model as well as dotted lines for z_0.025 and z_0.975}
+#' \item{"qq"}{Plots a QQ plot of the standardized residuals}
+#' }
+#' @param xlim,ylim Limits of the axes of the plot. Given as a vector similar to c(0,100). \code{xlim} defaults to the range from 0 to the maximum value of heartwood in the data (with some padding). \code{ylim} defaults to 0 to the maximum value of predicted data with some padding.
+#' @param prediction If TRUE, prediction bands are plotted on the plot. Only used for type = "fit".
+#' @param confidence If TRUE, confidence bands to the median are plotted to the plot. Only used for type = "fit".
+#'
+#' @examples
+#' data(dat_TA)
+#' fit <- sapwood_fit_pl(S~H, dat_TA)
+#' plot(fit, xlim=c(0,220), ylim=c(0,150))
+#' plot(fit)
+#' plot(fit, type="residual")
+#' plot(fit, type="qq")
 #' @export
 plot.sapwood_fit <- function(object, type='fit', xlim=NULL, ylim=NULL, prediction=T, confidence=F) {
     if(object$type == "parabolic_linear_W")
         stop("Not possible to plot model, use type='parabolic_linear' or type='linear' instead.")
     if(is.null(xlim)) xlim = c(0,max(object$data$H)+20)
     if(is.null(ylim)) ylim = c(0,max(object$predictions$pred.upper[xlim])+20)
+    theme_set(theme_classic(base_size = 12) + theme(legend.position = "none"))
     if(type == "fit") {
         p <- object$data %>% ggplot(aes(x=H, y=S)) +
             geom_point() +

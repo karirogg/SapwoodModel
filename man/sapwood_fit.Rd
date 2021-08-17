@@ -70,6 +70,8 @@ The functions return objects of class "sapwood_fit". An object of class "plm" is
 \item{\code{formula}}{The formula for the model, as specified in the input.}
 \item{\code{type}}{Type of the model, "parabolic_linear_W", "parabolic_linear" or "linear" (Models 1,2 and 3, respectively).}
 \item{\code{alpha}}{Confidence of the model}
+
+#' @seealso \code{\link{summary.sapwood_fit}} for summaries, \code{\link{predict.sapwood_fit}} for prediction. It is also useful to look at \code{\link{plot.sapwood_fit}} to help visualize the model.
 }
 \description{
 The function takes in heartwood and sapwood (and possibly tree ring width) data from a dataset and returns a fit and some information about the fit, such as prediction intervals, figures, confidence intervals for parameters etc. See Edvardsson et al.

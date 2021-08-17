@@ -26,6 +26,7 @@
 #' \item{\code{type}}{Type of the model, "parabolic_linear_W", "parabolic_linear" or "linear" (Models 1,2 and 3, respectively).}
 #' \item{\code{alpha}}{Confidence of the model}
 #'
+#' #' @seealso \code{\link{summary.sapwood_fit}} for summaries, \code{\link{predict.sapwood_fit}} for prediction. It is also useful to look at \code{\link{plot.sapwood_fit}} to help visualize the model.
 #' @examples
 #' data(dat_TA)
 #' fit <- sapwood_fit_pl(S~H, dat_TA)

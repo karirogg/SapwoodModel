@@ -12,30 +12,30 @@ library(mosaic)
 theme_set(theme_classic(base_size = 12) + theme(legend.position = "none"))#, text = element_text(size=10, family="LM Roman 10")))
 
 # Fit function for main model
-log_parabolic_estimate <- function(theta, HW, HW_0, Z) {
+log_parabolic_estimate <- function(theta, H, H_0, Z) {
     theta_0 <- theta[1][[1]]
     theta_1 <- theta[2][[1]]
     theta_2 <- theta[3][[1]]
 
-    log(exp(theta_0) + exp(theta_2)*HW+exp(theta_1)*((HW <= HW_0)*(HW-HW^2/(2*HW_0))+(HW>HW_0)*1/2*HW_0))
+    log(exp(theta_0) + exp(theta_2)*H+exp(theta_1)*((H <= H_0)*(H-H^2/(2*H_0))+(H>H_0)*1/2*H_0))
 }
 
 # Fit function for linear model with lognormal residuals
-log_linear_estimate <- function(theta, HW, HW_0, Z) {
+log_linear_estimate <- function(theta, H, H_0, Z) {
     theta_0 <- theta[1][[1]]
     theta_1 <- theta[2][[1]]
 
-    log(exp(theta_0) + exp(theta_1)*HW)
+    log(exp(theta_0) + exp(theta_1)*H)
 }
 
 # Fit function for main model with the addition of the Z parameter
-log_parabolic_estimate_W <- function(theta, HW, HW_0, Z) {
+log_parabolic_estimate_W <- function(theta, H, H_0, Z) {
     theta_0 <- theta[1][[1]]
     theta_1 <- theta[2][[1]]
     theta_2 <- theta[3][[1]]
     beta_3 <- theta[4][[1]]
 
-    log(exp(theta_0) + exp(theta_2)*HW+exp(theta_1)*((HW <= HW_0)*(HW-HW^2/(2*HW_0))+(HW>HW_0)*1/2*HW_0) + beta_3*Z)
+    log(exp(theta_0) + exp(theta_2)*H+exp(theta_1)*((H <= H_0)*(H-H^2/(2*H_0))+(H>H_0)*1/2*H_0) + beta_3*Z)
 }
 
 # Make sure data has constant variance on real scale
@@ -50,23 +50,23 @@ parabolic_regularization_term <- function(parameters, theta_1_index, mu_theta_1,
 }
 
 # Log likelihood for lognormal distribution
-calculate_log_likelihood <- function(parameters, x, y, Z, fit_function, HW_0, sigma_function) {
+calculate_log_likelihood <- function(parameters, x, y, Z, fit_function, H_0, sigma_function) {
     tau <- parameters[length(parameters)][[1]]
 
-    mu <- fit_function(parameters, x, HW_0, Z)
+    mu <- fit_function(parameters, x, H_0, Z)
     sigma <- sigma_function(tau, mu)
 
-    # + y in the end for likelihood function of the lognormal distribution
+    # adding y in the end for likelihood function of the lognormal distribution
     -sum((y-mu)^2/(2*sigma^2) + log(sqrt(2*pi)*sigma) + y)
 }
 
-calculate_negative_log_likelihood <- function(parameters, x, y, Z, fit_function, HW_0, sigma_function, regularization_term=function(x){0}, ...) {
+calculate_negative_log_likelihood <- function(parameters, x, y, Z, fit_function, H_0, sigma_function, regularization_term=function(x){0}, ...) {
     -(calculate_log_likelihood(parameters=unlist(parameters),
                                x=x,
                                y=y,
                                Z=Z,
                                fit_function=fit_function,
-                               HW_0 = HW_0,
+                               H_0 = H_0,
                                sigma_function = sigma_function) +
           regularization_term(parameters,...))
 }
@@ -311,7 +311,6 @@ sapwood_fit_raw <- function(formula = as.formula("S~H"),
     out$predictions <- prediction_intervals
     out$residuals <- residuals
     out$AIC <- model_AIC
-    out$data <- dat
     out$formula <- formula
     out$type <- type
     out$alpha <- alpha

@@ -79,6 +79,7 @@ The function takes in heartwood and sapwood (and possibly tree ring width) data 
 \examples{
 data(dat_TA)
 fit <- sapwood_fit_pl(S~H, dat_TA)
+summary(fit)
 plot(fit)
 plot(fit, type="residual")
 plot(fit, type="qq")

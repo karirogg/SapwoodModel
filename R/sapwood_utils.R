@@ -52,7 +52,7 @@ parabolic_regularization_term <- function(parameters, theta_1_index, mu_theta_1,
 calculate_log_likelihood <- function(parameters, x, y, Z, fit_function, H_0, sigma_function) {
     tau <- parameters[length(parameters)][[1]]
 
-    mu <- fit_function(parameters, x, H_0, Z)
+    mu <- fit_function(theta=parameters, H=x, H_0=H_0, Z=Z)
     sigma <- sigma_function(tau, mu)
 
     # adding y in the end for likelihood function of the lognormal distribution
@@ -118,13 +118,14 @@ sapwood_fit_raw <- function(formula = as.formula("S~H"),
                             is_shiny = F, ...) {
     formula_args <- all.vars(formula)
 
-    dat <- dat[,formula_args]
 
+    dat <- dat[,formula_args]
     # Transform data accordingly and rename columns to needs
     dat <- dat %>%
         rename(H = !!formula_args[2][[1]],
                S = !!formula_args[1][[1]]) %>%
-        mutate(transformed_S = transformation(S))
+        mutate(transformed_S = transformation(S)) %>%
+        filter(H != 0)
 
     if(length(formula_args) == 3) {
         dat <- dat %>% rename(W = !!formula_args[3][[1]])
@@ -134,8 +135,7 @@ sapwood_fit_raw <- function(formula = as.formula("S~H"),
 
     if("W" %in% colnames(dat)) {
         # Add transformed mean TRW (if included)
-        dat <- dat %>% filter(W != 0) %>%
-            mutate(Z = residuals(lm(W^(-1/2) ~ H, data=.)))
+        dat <- dat %>% filter(W != 0) %>% mutate(Z = residuals(lm(W^(-1/2) ~ H, data=.)))
     }
 
     # Initializing parameters for optimization
@@ -144,13 +144,16 @@ sapwood_fit_raw <- function(formula = as.formula("S~H"),
     # exp(tau) is the variance of the data on real scale (constant)
     start_list['tau'] = 0
 
+    Z_input <- rep(0,nrow(dat))
+    if("Z" %in% colnames(dat)) Z_input <- dat$Z
+
     # Fitting maximum likelihood estimate for log likelihood function
     # with regularization term
     fit <- nlminb(start = unlist(start_list),
                   objective = calculate_negative_log_likelihood,
                   x = dat$H,
                   y = transformation(dat$S),
-                  Z = ifelse("Z" %in% colnames(dat), dat$Z, rep(0, nrow(dat))),
+                  Z = Z_input,
                   fit_function = fit_function,
                   sigma_function = sigma_function,
                   regularization_term = regularization_term,
@@ -159,7 +162,7 @@ sapwood_fit_raw <- function(formula = as.formula("S~H"),
 
     # Obtaining the best fit
     best_fit_function <- function(H) {
-        fit_function(unlist(fit$par), H, 100, ifelse("Z" %in% colnames(dat), dat$Z, rep(0, nrow(dat))))
+        fit_function(unlist(fit$par), H, 100, 0)
     }
 
     kmax <- 500
@@ -169,7 +172,7 @@ sapwood_fit_raw <- function(formula = as.formula("S~H"),
     # Bootstrap for confidence interval
     # Resampling from standardized residuals and sigma_mu calculated pointwise
     # (standard error of the bootstrapped fits)
-    residuals <- (transformation(dat$S)-best_fit_function(dat$H))/sigma_function(tau, best_fit_function(dat$H))
+    residuals <- (transformation(dat$S)-fit_function(unlist(fit$par), dat$H, 100, Z_input))/sigma_function(tau, fit_function(unlist(fit$par), dat$H, 100, Z_input))
 
     n_samples <- 1000
     sample_size <- nrow(dat)
@@ -188,7 +191,7 @@ sapwood_fit_raw <- function(formula = as.formula("S~H"),
     if(length(parameters) > 2) mle["beta_1+beta_2"] = exp(fit$par["theta_1"][[1]]) + exp(fit$par["theta_2"][[1]])
     mle["sigma"] = exp(fit$par["tau"][[1]]/2)
 
-    bootstrap_predictions_H <- rep(0:kmax, each=n_prediction_samples)
+    bootstrap_prediction_H <- rep(0:kmax, each=n_prediction_samples)
 
     for(i in 1:n_samples) {
         if(i %% floor(n_samples/100) == 0) {
@@ -200,12 +203,10 @@ sapwood_fit_raw <- function(formula = as.formula("S~H"),
         sample_indices <- sample(x=1:sample_size, size=sample_size, replace=T)
 
         # Standardized residuals calculated to residuals
-        residuals_bootstrap <- residuals[sample_indices]*sigma_function(tau, best_fit_function(dat$H))
+        residuals_bootstrap <- residuals[sample_indices]*sigma_function(tau, fit_function(unlist(fit$par), dat$H, 100, Z_input))
 
         # Fetch data to perform fit on by adding the residuals to mu_i
-        S_bootstrap <- best_fit_function(dat$H)+residuals_bootstrap
-        H_bootstrap <- dat$H
-        Z_bootstrap <- ifelse("Z" %in% colnames(dat), dat$Z, rep(0, nrow(dat)))
+        S_bootstrap <- fit_function(unlist(fit$par), dat$H, 100, Z_input)+residuals_bootstrap
 
         start_list = fit$par
 
@@ -213,9 +214,9 @@ sapwood_fit_raw <- function(formula = as.formula("S~H"),
         # with regularization term
         bootstrap_fit <- nlminb(start = unlist(start_list),
                                 objective = calculate_negative_log_likelihood,
-                                x = H_bootstrap,
+                                x = dat$H,
                                 y = S_bootstrap,
-                                Z = Z_bootstrap,
+                                Z = Z_input,
                                 fit_function = fit_function,
                                 sigma_function = sigma_function,
                                 regularization_term = regularization_term,
@@ -225,11 +226,11 @@ sapwood_fit_raw <- function(formula = as.formula("S~H"),
         if(type != "parabolic_linear_W") {
             bootstrap_predictions[(1+(i-1)*n_prediction_samples*(kmax+1)):(i*n_prediction_samples*(kmax+1))] =
                 fit_function(head(unlist(bootstrap_fit$par),-1),
-                             bootstrap_predictions_H,
+                             bootstrap_prediction_H,
                              H_0,
-                             ifelse("Z" %in% colnames(dat), dat$Z,0)) +
+                             0) +
                 residuals[sample(1:nrow(dat),size = n_prediction_samples*(kmax+1), replace=T)]*
-                sigma_function(tau, best_fit_function(bootstrap_predictions_H))
+                sigma_function(tau, fit_function(unlist(fit$par), bootstrap_prediction_H, 100, 0))
         }
 
         bootstrap_medians <-  bootstrap_medians %>%
@@ -237,12 +238,12 @@ sapwood_fit_raw <- function(formula = as.formula("S~H"),
                              value=fit_function(head(unlist(bootstrap_fit$par),-1),
                                                 0:kmax,
                                                 H_0,
-                                                ifelse("Z" %in% colnames(dat), dat$Z,0))))
+                                                0)))
 
         parameter_list <- bootstrap_fit$par
         if(length(parameters) > 2)
             parameter_list["beta_1+beta_2"] = exp(bootstrap_fit$par["theta_1"][[1]]) +
-            exp(bootstrap_fit$par["theta_2"][[1]])
+                exp(bootstrap_fit$par["theta_2"][[1]])
         parameter_list["sigma"] = exp(bootstrap_fit$par["tau"][[1]]/2)
         parameter_tibble <- as_tibble(parameter_list) %>% mutate(term=names(parameter_list))
 
@@ -256,7 +257,7 @@ sapwood_fit_raw <- function(formula = as.formula("S~H"),
             summarise(conf.lower = inverse_transformation(quantile(value, 0.025)),
                       conf.upper = inverse_transformation(quantile(value, 0.975)))
 
-        prediction_intervals <- tibble(H = rep(bootstrap_predictions_H, n_samples), value = bootstrap_predictions) %>%
+        prediction_intervals <- tibble(H = rep(bootstrap_prediction_H, n_samples), value = bootstrap_predictions) %>%
             group_by(H) %>%
             summarise(pred.lower = inverse_transformation(quantile(value, 0.025)),
                       pred.upper = inverse_transformation(quantile(value, 0.975))) %>%
@@ -265,9 +266,7 @@ sapwood_fit_raw <- function(formula = as.formula("S~H"),
             inner_join(confidence_intervals_mu, by="H") %>%
             arrange(H) %>%
             select(H, median, pred.lower, pred.upper, conf.lower, conf.upper)
-    } else {
-        prediction_intervals <- tibble(H = 0:kmax, median = best_fit_function(H))
-    }
+    } else prediction_intervals <- tibble(H = 0:kmax, median = 0)
 
     parameter_medians <- as_tibble(mle) %>% mutate(term = names(mle)) %>% rename(median=value)
     parameter_CI <- bootstrap_parameters %>%
@@ -277,12 +276,12 @@ sapwood_fit_raw <- function(formula = as.formula("S~H"),
         ungroup %>%
         left_join(parameter_medians, by="term")
 
-    # AIC calculations (length(parameters)+1 used because tau is not included in the paramters vector)
+    # AIC calculations (length(parameters)+1 used because tau is not included in the parameters vector)
     model_AIC <-  2*(length(parameters)+1) -
         2*(calculate_log_likelihood(parameters = unlist(fit$par),
                                     x = dat$H,
                                     y = dat$transformed_S,
-                                    Z = ifelse("Z" %in% colnames(dat), dat$Z, rep(0, nrow(dat))),
+                                    Z = Z_input,
                                     fit_function = fit_function,
                                     H_0 = H_0,
                                     sigma_function = sigma_function))

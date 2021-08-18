@@ -30,6 +30,7 @@
 #' @examples
 #' data(dat_TA)
 #' fit <- sapwood_fit_pl(S~H, dat_TA)
+#' summary(fit)
 #' plot(fit)
 #' plot(fit, type="residual")
 #' plot(fit, type="qq")
@@ -51,7 +52,7 @@ sapwood_fit_l <- function(formula,
     stopifnot('formula' %in% class(formula))
     stopifnot('data.frame' %in% class(dat) | 'tibble' %in% class(dat))
     if(length(all.vars(formula)) != 2)
-        stop(paste0("Formula ", formula, " not valid. Please specify a formula on the form S~H"))
+        stop(paste0("Formula ", formula, " not valid. Please specify a formula on the form S~H. "))
     return(sapwood_fit_raw(formula=formula,
                            dat = dat,
                            fit_function = log_linear_estimate,
@@ -77,7 +78,7 @@ sapwood_fit_pl <- function(formula,
     stopifnot('formula' %in% class(formula))
     stopifnot('data.frame' %in% class(dat) | 'tibble' %in% class(dat))
     if(length(all.vars(formula)) != 2)
-        stop(paste0("Formula ", deparse(formula), " not valid. Please specify a formula on the form S~H"))
+        stop(paste0("Formula ", deparse(formula), " not valid. Please specify a formula on the form S~H. "))
     return(sapwood_fit_raw(formula=formula,
                            dat = dat,
                            fit_function = log_parabolic_estimate,
@@ -110,7 +111,7 @@ sapwood_fit_plw <- function(formula,
     stopifnot('formula' %in% class(formula))
     stopifnot('data.frame' %in% class(dat) | 'tibble' %in% class(dat))
     if(length(all.vars(formula)) != 3)
-        stop(paste0("Formula ", formula, " not valid. Please specify a formula on the form S~H+W"))
+        stop(paste0("Formula ", formula, " not valid. Please specify a formula on the form S~H+W. "))
     return(sapwood_fit_raw(formula=formula,
                            dat = dat,
                            fit_function = log_parabolic_estimate_W,

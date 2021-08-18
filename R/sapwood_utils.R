@@ -160,19 +160,17 @@ sapwood_fit_raw <- function(formula = as.formula("S~H"),
                   H_0 = H_0,
                   ...)
 
-    # Obtaining the best fit
-    best_fit_function <- function(H) {
-        fit_function(unlist(fit$par), H, 100, 0)
-    }
-
     kmax <- 500
 
     tau = fit$par['tau'][[1]]
 
+    best_fit_function <- function(H,Z) {
+        fit_function(unlist(fit$par), H, H_0, Z)
+    }
+
     # Bootstrap for confidence interval
-    # Resampling from standardized residuals and sigma_mu calculated pointwise
-    # (standard error of the bootstrapped fits)
-    residuals <- (transformation(dat$S)-fit_function(unlist(fit$par), dat$H, 100, Z_input))/sigma_function(tau, fit_function(unlist(fit$par), dat$H, 100, Z_input))
+    # Resampling from standardized residuals, prediction and confidence intervals calculated pointwise.
+    residuals <- (transformation(dat$S)-best_fit_function(dat$H,Z_input))/sigma_function(tau, best_fit_function(dat$H,Z_input))
 
     n_samples <- 1000
     sample_size <- nrow(dat)
@@ -203,10 +201,10 @@ sapwood_fit_raw <- function(formula = as.formula("S~H"),
         sample_indices <- sample(x=1:sample_size, size=sample_size, replace=T)
 
         # Standardized residuals calculated to residuals
-        residuals_bootstrap <- residuals[sample_indices]*sigma_function(tau, fit_function(unlist(fit$par), dat$H, 100, Z_input))
+        residuals_bootstrap <- residuals[sample_indices]*sigma_function(tau, best_fit_function(dat$H, Z_input))
 
         # Fetch data to perform fit on by adding the residuals to mu_i
-        S_bootstrap <- fit_function(unlist(fit$par), dat$H, 100, Z_input)+residuals_bootstrap
+        S_bootstrap <- best_fit_function(dat$H, Z_input)+residuals_bootstrap
 
         start_list = fit$par
 
@@ -230,7 +228,7 @@ sapwood_fit_raw <- function(formula = as.formula("S~H"),
                              H_0,
                              0) +
                 residuals[sample(1:nrow(dat),size = n_prediction_samples*(kmax+1), replace=T)]*
-                sigma_function(tau, fit_function(unlist(fit$par), bootstrap_prediction_H, 100, 0))
+                sigma_function(tau, fit_function(unlist(fit$par), bootstrap_prediction_H, H_0, 0))
         }
 
         bootstrap_medians <-  bootstrap_medians %>%
@@ -262,11 +260,15 @@ sapwood_fit_raw <- function(formula = as.formula("S~H"),
             summarise(pred.lower = inverse_transformation(quantile(value, 0.025)),
                       pred.upper = inverse_transformation(quantile(value, 0.975))) %>%
             ungroup %>%
-            mutate(median = inverse_transformation(best_fit_function(H))) %>%
+            mutate(median = inverse_transformation(best_fit_function(H, 0))) %>%
             inner_join(confidence_intervals_mu, by="H") %>%
             arrange(H) %>%
             select(H, median, pred.lower, pred.upper, conf.lower, conf.upper)
-    } else prediction_intervals <- tibble(H = 0:kmax, median = 0)
+    } else {
+        prediction_intervals <- dat %>% mutate(median = best_fit_function(H, Z_input)) %>%
+                                        select(H,Z, median) %>%
+                                        arrange(H,Z)
+    }
 
     parameter_medians <- as_tibble(mle) %>% mutate(term = names(mle)) %>% rename(median=value)
     parameter_CI <- bootstrap_parameters %>%
@@ -299,7 +301,8 @@ sapwood_fit_raw <- function(formula = as.formula("S~H"),
     transformed_parameter_CI <- bind_rows(transformed_parameter_CI,
                                           parameter_CI) %>%
         arrange(parameter) %>%
-        select(term, conf.low, median, conf.high)
+        select(term, conf.low, median, conf.high) %>%
+        filter(term %in% c("beta_0", "beta_1", "beta_2", "beta_3", "beta_1+beta_2", "sigma"))
 
     out <- list()
 
@@ -313,6 +316,7 @@ sapwood_fit_raw <- function(formula = as.formula("S~H"),
     out$type <- type
     out$alpha <- alpha
     out$data <- dat
+    out$fit_function <- best_fit_function
 
     out
 }
@@ -327,9 +331,21 @@ AIC.sapwood_fit <- function(object,...) {
 #' Obtain predictions for a model of type 'sapwood_fit',
 #' including prediction and confidence intervals (for \code{sapwood_fit_l} and \code{sapwood_fit_pl}).
 #' For an object resulted in a \code{sapwood_fit_plw} call, only prediction median is included.
+#'
+#' @param object an object of class "sapwood_fit", a result from a call to \code{sapwood_fit_l}, \code{sapwood_fit_pl} or \code{sapwood_fit_plw}.
+#' @param newdata an optional data frame/tibble/vector in which to look for variables with which to predict. If omitted, the fitted values are used.
 #' @export
-predict.sapwood_fit <- function(object, ...) {
-    object$predictions
+predict.sapwood_fit <- function(object, newdata=NULL,...) {
+    if(is.null(newdata)) return(object$predictions)
+
+    if(object$type == "parabolic_linear_W") {
+        return(mutate(newdata, median=object$fit_function(H,Z)))
+    }
+
+    filtering <- TRUE
+    if("data.frame" %in% class(newdata)) filtering <- object$predictions$H %in% newdata$H
+    else filtering <- object$predictions$H %in% newdata
+    object$predictions %>% filter(filtering)
 }
 
 #' @export

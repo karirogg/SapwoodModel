@@ -4,7 +4,12 @@
 \alias{predict.sapwood_fit}
 \title{Prediction for sapwood rings}
 \usage{
-\method{predict}{sapwood_fit}(object, ...)
+\method{predict}{sapwood_fit}(object, newdata = NULL, ...)
+}
+\arguments{
+\item{object}{an object of class "sapwood_fit", a result from a call to \code{sapwood_fit_l}, \code{sapwood_fit_pl} or \code{sapwood_fit_plw}.}
+
+\item{newdata}{an optional data frame/tibble/vector in which to look for variables with which to predict. If omitted, the fitted values are used.}
 }
 \description{
 Obtain predictions for a model of type 'sapwood_fit',

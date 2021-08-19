@@ -15,6 +15,26 @@ devtools::install_github("karirogg/sapwood_scots_pine")
 ```
 
 ### Getting started
+Get to know the package by trying to fit your first model to the data. Fetch some data by calling
+```
+data(dat_TA)
+```
+and run the model with:
+```
+model <- sapwood_fit_pl(S~H, dat_TA)
+```
+Note that `sapwood_fit_pl` can be replaced with `sapwood_fit_l` or `sapwood_fit_plw` (see `?sapwood_fit` for usage documentation).
+
+From here, you can see some information about the fit by running
+```
+summary(model)
+plot(model)
+predict(model, 220:300)
+model$parameter_CI
+```
+
+and more (see `?plot.sapwood_fit`, `?predict.sapwood_fit` etc.)
+
 
 ### References
 Edvardsson et. al.

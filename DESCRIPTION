@@ -20,5 +20,15 @@ Imports:
     broom,
     mosaic
 Depends: 
-    R (>= 2.10)
+    R (>= 3.60),
+    ggplot2,
+    dplyr,
+    stringr,
+    here,
+    patchwork,
+    readxl,
+    writexl,
+    Hmisc,
+    broom,
+    mosaic
 RoxygenNote: 7.1.1

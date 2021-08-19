@@ -67,7 +67,7 @@ and W is the name of the column including data on mean tree ring width.}
 \item{is_shiny}{If the model is used with shiny, this will update the progress bar to show how long is left.}
 }
 \value{
-The functions return objects of class "sapwood_fit". An object of class "plm" is a list containing the following components:\cr
+The functions return objects of class "sapwood_fit". An object of class "sapwood_fit" is a list containing the following components:\cr
 \item{\code{parameter_CI}}{Confidence intervals for the parameters of the model.}
 \item{\code{predictions}}{Predictions for the model for H between 0 and 500, if \code{sapwood_fit_l} or \code{sapwood_fit_pl} are used, prediction and confidence intervals for the fit is included. If \code{sapwood_fit_plw} is used, only median of the prediction is returned.}
 \item{\code{residuals}}{Standardized residuals of the model. See Edvardsson et al. 2021.}

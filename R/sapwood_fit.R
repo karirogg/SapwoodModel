@@ -17,6 +17,7 @@
 #' @param mu_theta_2 Regularization mu for theta_2 (see Edvardsson et al. 2021)
 #' @param sd_theta_2 Regularization sigma for theta_2 (see Edvardsson et al. 2021)
 #' @param H_0 Cutoff point for parabolic-linear model. Only relevant for \code{sapwood_fit_pl} and \code{sapwood_fit_plw}.
+#' @param is_shiny If the model is used with shiny, this will update the progress bar to show how long is left.
 #' @return The functions return objects of class "sapwood_fit". An object of class "plm" is a list containing the following components:\cr
 #' \item{\code{parameter_CI}}{Confidence intervals for the parameters of the model.}
 #' \item{\code{predictions}}{Predictions for the model for H between 0 and 500, if \code{sapwood_fit_l} or \code{sapwood_fit_pl} are used, prediction and confidence intervals for the fit is included. If \code{sapwood_fit_plw} is used, only median of the prediction is returned.}
@@ -48,7 +49,8 @@ sapwood_fit_l <- function(formula,
                           sd_theta_1 = (log(0.1)+4*log(10))/2,
                           mu_theta_2 = log(0.1),
                           sd_theta_2 = (log(0.1)+4*log(10))/2,
-                          H_0 = 100) {
+                          H_0 = 100,
+                          is_shiny = F) {
     stopifnot('formula' %in% class(formula))
     stopifnot('data.frame' %in% class(dat) | 'tibble' %in% class(dat))
     if(length(all.vars(formula)) != 2)
@@ -62,6 +64,7 @@ sapwood_fit_l <- function(formula,
                            inverse_transformation = exp,
                            sigma_function = sigma_i_function,
                            type="linear",
+                           is_shiny = is_shiny,
                            H_0 = H_0))
 }
 
@@ -74,7 +77,8 @@ sapwood_fit_pl <- function(formula,
                            sd_theta_1 = (log(0.1)+4*log(10))/2,
                            mu_theta_2 = log(0.1),
                            sd_theta_2 = (log(0.1)+4*log(10))/2,
-                           H_0 = 100) {
+                           H_0 = 100,
+                           is_shiny = F) {
     stopifnot('formula' %in% class(formula))
     stopifnot('data.frame' %in% class(dat) | 'tibble' %in% class(dat))
     if(length(all.vars(formula)) != 2)
@@ -95,7 +99,8 @@ sapwood_fit_pl <- function(formula,
                            mu_theta_2 = mu_theta_2,
                            sd_theta_2 = sd_theta_2,
                            type="parabolic_linear",
-                           H_0 = H_0))
+                           H_0 = H_0,
+                           is_shiny = is_shiny))
 }
 
 #' @rdname sapwood_fit
@@ -107,7 +112,8 @@ sapwood_fit_plw <- function(formula,
                             sd_theta_1 = (log(0.1)+4*log(10))/2,
                             mu_theta_2 = log(0.1),
                             sd_theta_2 = (log(0.1)+4*log(10))/2,
-                            H_0 = 100) {
+                            H_0 = 100,
+                            is_shiny = F) {
     stopifnot('formula' %in% class(formula))
     stopifnot('data.frame' %in% class(dat) | 'tibble' %in% class(dat))
     if(length(all.vars(formula)) != 3)
@@ -128,5 +134,6 @@ sapwood_fit_plw <- function(formula,
                            mu_theta_2 = mu_theta_2,
                            sd_theta_2 = sd_theta_2,
                            type="parabolic_linear_W",
-                           H_0 = H_0))
+                           H_0 = H_0,
+                           is_shiny = is_shiny))
 }

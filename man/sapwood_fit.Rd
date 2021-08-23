@@ -15,8 +15,7 @@ sapwood_fit_l(
   sd_theta_1 = (log(0.1) + 4 * log(10))/2,
   mu_theta_2 = log(0.1),
   sd_theta_2 = (log(0.1) + 4 * log(10))/2,
-  H_0 = 100,
-  is_shiny = F
+  H_0 = 100
 )
 
 sapwood_fit_pl(
@@ -27,8 +26,7 @@ sapwood_fit_pl(
   sd_theta_1 = (log(0.1) + 4 * log(10))/2,
   mu_theta_2 = log(0.1),
   sd_theta_2 = (log(0.1) + 4 * log(10))/2,
-  H_0 = 100,
-  is_shiny = F
+  H_0 = 100
 )
 
 sapwood_fit_plw(
@@ -39,8 +37,7 @@ sapwood_fit_plw(
   sd_theta_1 = (log(0.1) + 4 * log(10))/2,
   mu_theta_2 = log(0.1),
   sd_theta_2 = (log(0.1) + 4 * log(10))/2,
-  H_0 = 100,
-  is_shiny = F
+  H_0 = 100
 )
 }
 \arguments{
@@ -63,8 +60,6 @@ and W is the name of the column including data on mean tree ring width.}
 \item{sd_theta_2}{Regularization sigma for theta_2 (see Edvardsson et al. 2021)}
 
 \item{H_0}{Cutoff point for parabolic-linear model. Only relevant for \code{sapwood_fit_pl} and \code{sapwood_fit_plw}.}
-
-\item{is_shiny}{If the model is used with shiny, this will update the progress bar to show how long is left.}
 }
 \value{
 The functions return objects of class "sapwood_fit". An object of class "sapwood_fit" is a list containing the following components:\cr

@@ -273,8 +273,8 @@ sapwood_fit_raw <- function(formula = as.formula("S~H"),
     parameter_medians <- as_tibble(mle) %>% mutate(term = names(mle)) %>% rename(median=value)
     parameter_CI <- bootstrap_parameters %>%
         group_by(term) %>%
-        summarise(conf.low = quantile(value, 0.025),
-                  conf.high = quantile(value, 0.975)) %>%
+        summarise(conf.lower = quantile(value, 0.025),
+                  conf.upper = quantile(value, 0.975)) %>%
         ungroup %>%
         left_join(parameter_medians, by="term")
 
@@ -294,14 +294,14 @@ sapwood_fit_raw <- function(formula = as.formula("S~H"),
     transformed_parameter_CI <- parameter_CI %>%
         filter(str_detect(term, c("theta"))) %>%
         mutate(median = exp(median),
-               conf.low = exp(conf.low),
-               conf.high = exp(conf.high),
+               conf.lower = exp(conf.lower),
+               conf.upper = exp(conf.upper),
                term = paste0("b", substr(term, 3, nchar(term))))
 
     transformed_parameter_CI <- bind_rows(transformed_parameter_CI,
                                           parameter_CI) %>%
         arrange(parameter) %>%
-        select(term, conf.low, median, conf.high) %>%
+        select(term, conf.lower, median, conf.upper) %>%
         filter(term %in% c("beta_0", "beta_1", "beta_2", "beta_3", "beta_1+beta_2", "sigma"))
 
     out <- list()
@@ -316,7 +316,11 @@ sapwood_fit_raw <- function(formula = as.formula("S~H"),
     out$type <- type
     out$alpha <- alpha
     out$data <- dat
+    out$sigma_function <- sigma_function
     out$fit_function <- best_fit_function
+    out$bootstrap_medians <- bootstrap_medians
+    out$mle = mle
+    out$H_0 = H_0
 
     out
 }
@@ -346,6 +350,33 @@ predict.sapwood_fit <- function(object, newdata=NULL,...) {
     if("data.frame" %in% class(newdata)) filtering <- object$predictions$H %in% newdata$H
     else filtering <- object$predictions$H %in% newdata
     object$predictions %>% filter(filtering)
+}
+
+#' @export
+predict_remaining <- function(object, H, remaining, ...) {
+    if(class(object) != "sapwood_fit") stop("object must be of class 'sapwood_fit'")
+    if(length(H) != length(remaining)) stop("H and remaining not of same length")
+    prediction <- tibble()
+
+    bootstrap_medians <- object$bootstrap_medians %>% rename(HW = H)
+
+    for(i in 1:length(H)) {
+        print(H[i])
+        H_medians <- bootstrap_medians %>% filter(HW == H[i])
+        bootstrap_predictions <- tibble(HW=rep(H_medians$HW, each=100), value=rep(H_medians$value, each=100)) %>%
+                                 mutate(value = value + sample(residuals(object),
+                                                               1000*100,
+                                                               replace=T)*
+                                                                object$sigma_function(object$mle['tau'][[1]], object$fit_function(HW)))
+        row <- bootstrap_predictions %>% filter(HW == H[i], exp(value) >= remaining[i]) %>%
+                                                           group_by(HW) %>%
+                                                           summarise(remaining = remaining[i],
+                                                                     median = exp(quantile(value, 0.5)),
+                                                                     pred.upper = exp(quantile(value, 0.95)))
+        prediction <- prediction %>% bind_rows(row)
+    }
+
+    prediction
 }
 
 #' @export

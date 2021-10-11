@@ -9,6 +9,7 @@ library(Hmisc)
 library(broom)
 library(mosaic)
 library(stringr)
+library(tidyr)
 
 # Fit function for main model
 log_parabolic_estimate <- function(theta, H, H_0, Z) {
@@ -135,7 +136,8 @@ sapwood_fit_raw <- function(formula = as.formula("S~H"),
 
     if("W" %in% colnames(dat)) {
         # Add transformed mean TRW (if included)
-        dat <- dat %>% filter(W != 0) %>% mutate(Z = residuals(lm(W^(-1/2) ~ H, data=.)))
+        Z_model <- lm(W^(-1/2) ~ H, data=dat)
+        dat <- dat %>% filter(W != 0) %>% mutate(Z = residuals(Z_model))
     }
 
     # Initializing parameters for optimization
@@ -181,9 +183,10 @@ sapwood_fit_raw <- function(formula = as.formula("S~H"),
     # Contains the bootstrap estimates for the parameters in every resample to create CI for parameters
     bootstrap_parameters <- tibble()
 
-    if(type != "parabolic_linear_W")
+    if(type != "parabolic_linear_W") {
         # Contains the bootstrap estimates in every point to create prediction interval for the fit
         bootstrap_predictions <- rep(0,(kmax+1)*n_samples*n_prediction_samples)
+    }
 
     mle = fit$par
     if(length(parameters) > 2) mle["beta_1+beta_2"] = exp(fit$par["theta_1"][[1]]) + exp(fit$par["theta_2"][[1]])
@@ -221,15 +224,15 @@ sapwood_fit_raw <- function(formula = as.formula("S~H"),
                                 H_0 = H_0,
                                 ...)
 
-        if(type != "parabolic_linear_W") {
-            bootstrap_predictions[(1+(i-1)*n_prediction_samples*(kmax+1)):(i*n_prediction_samples*(kmax+1))] =
-                fit_function(head(unlist(bootstrap_fit$par),-1),
-                             bootstrap_prediction_H,
-                             H_0,
-                             0) +
-                residuals[sample(1:nrow(dat),size = n_prediction_samples*(kmax+1), replace=T)]*
-                sigma_function(tau, fit_function(unlist(fit$par), bootstrap_prediction_H, H_0, 0))
-        }
+        # if(type != "parabolic_linear_W") {
+        #     bootstrap_predictions[(1+(i-1)*n_prediction_samples*(kmax+1)):(i*n_prediction_samples*(kmax+1))] =
+        #         fit_function(head(unlist(bootstrap_fit$par),-1),
+        #                      bootstrap_prediction_H,
+        #                      H_0,
+        #                      0) +
+        #         residuals[sample(1:nrow(dat),size = n_prediction_samples*(kmax+1), replace=T)]*
+        #         sigma_function(tau, fit_function(unlist(fit$par), bootstrap_prediction_H, H_0, 0))
+        # }
 
         bootstrap_medians <-  bootstrap_medians %>%
             bind_rows(tibble(H=0:kmax,
@@ -243,23 +246,34 @@ sapwood_fit_raw <- function(formula = as.formula("S~H"),
             parameter_list["beta_1+beta_2"] = exp(bootstrap_fit$par["theta_1"][[1]]) +
                 exp(bootstrap_fit$par["theta_2"][[1]])
         parameter_list["sigma"] = exp(bootstrap_fit$par["tau"][[1]]/2)
-        parameter_tibble <- as_tibble(parameter_list) %>% mutate(term=names(parameter_list))
+        parameter_tibble <- as_tibble(parameter_list) %>% mutate(term=names(parameter_list)) %>%
+            mutate(replication = i)
 
         bootstrap_parameters <- bootstrap_parameters %>% bind_rows(parameter_tibble)
     }
     cat("\n")
+
+    prediction_intervals <- tibble()
 
     if(type != "parabolic_linear_W") {
         confidence_intervals_mu <- bootstrap_medians %>%
             group_by(H) %>%
             summarise(conf.lower = inverse_transformation(quantile(value, 0.025)),
                       conf.upper = inverse_transformation(quantile(value, 0.975)))
+        for(i in 0:kmax) {
+            H_medians <- bootstrap_medians %>% filter(H == i)
+            bootstrap_predictions <- tibble(H=rep(H_medians$H, each=100), value=rep(H_medians$value, each=100)) %>%
+                mutate(value = value + sample(residuals,
+                                              n_samples*n_prediction_samples,
+                                              replace=T)*
+                           sigma_function(tau, best_fit_function(H))) %>%
+                group_by(H) %>%
+                summarise(pred.lower = exp(quantile(value, alpha/2)),
+                          pred.upper = exp(quantile(value, 1-alpha/2)))
+            prediction_intervals <- prediction_intervals %>% bind_rows(bootstrap_predictions)
+        }
 
-        prediction_intervals <- tibble(H = rep(bootstrap_prediction_H, n_samples), value = bootstrap_predictions) %>%
-            group_by(H) %>%
-            summarise(pred.lower = inverse_transformation(quantile(value, 0.025)),
-                      pred.upper = inverse_transformation(quantile(value, 0.975))) %>%
-            ungroup %>%
+        prediction_intervals <- prediction_intervals %>%
             mutate(median = inverse_transformation(best_fit_function(H, 0))) %>%
             inner_join(confidence_intervals_mu, by="H") %>%
             arrange(H) %>%
@@ -273,8 +287,8 @@ sapwood_fit_raw <- function(formula = as.formula("S~H"),
     parameter_medians <- as_tibble(mle) %>% mutate(term = names(mle)) %>% rename(median=value)
     parameter_CI <- bootstrap_parameters %>%
         group_by(term) %>%
-        summarise(conf.lower = quantile(value, 0.025),
-                  conf.upper = quantile(value, 0.975)) %>%
+        summarise(conf.lower = quantile(value, alpha/2),
+                  conf.upper = quantile(value, 1-alpha/2)) %>%
         ungroup %>%
         left_join(parameter_medians, by="term")
 
@@ -308,6 +322,7 @@ sapwood_fit_raw <- function(formula = as.formula("S~H"),
 
     attr(out, "class") <- "sapwood_fit"
 
+    out$dat <- dat
     out$parameter_CI <- transformed_parameter_CI
     out$predictions <- prediction_intervals
     out$residuals <- residuals
@@ -317,10 +332,14 @@ sapwood_fit_raw <- function(formula = as.formula("S~H"),
     out$alpha <- alpha
     out$data <- dat
     out$sigma_function <- sigma_function
-    out$fit_function <- best_fit_function
-    out$bootstrap_medians <- bootstrap_medians
-    out$mle = mle
-    out$H_0 = H_0
+    out$best_fit_function <- best_fit_function
+    out$fit_function <- fit_function
+    out$bootstrap_parameters <- bootstrap_parameters
+    out$mle <- mle
+    out$H_0 <- H_0
+    out$n_samples <- n_samples
+    out$n_prediction_samples <- n_prediction_samples
+    if(type == "parabolic_linear_W") out$Z_model = Z_model
 
     out
 }
@@ -337,46 +356,81 @@ AIC.sapwood_fit <- function(object,...) {
 #' For an object resulted in a \code{sapwood_fit_plw} call, only prediction median is included.
 #'
 #' @param object an object of class "sapwood_fit", a result from a call to \code{sapwood_fit_l}, \code{sapwood_fit_pl} or \code{sapwood_fit_plw}.
-#' @param newdata an optional data frame/tibble/vector in which to look for variables with which to predict. If omitted, the fitted values are used.
+#' @param newdata an optional data frame/tibble/vector in which to look for variables with which to predict. If omitted, the fitted values are used. If a column \code{remaining} is in the \code{newdata} tibble/data frame, it will be treated as remaining sapwood rings and the prediction interval will be based on that
 #' @export
 predict.sapwood_fit <- function(object, newdata=NULL,...) {
     if(is.null(newdata)) return(object$predictions)
 
-    if(object$type == "parabolic_linear_W") {
-        return(mutate(newdata, median=object$fit_function(H,Z)))
+    if(object$type == "parabolic_linear_W" | "remaining" %in% colnames(newdata)) {
+        n_samples <- 1000
+        sample_size <- nrow(object$dat)
+        n_prediction_samples <- 100
+
+        bootstrap_Z <- 0
+        bootstrap_W <- 0
+        if(object$type == "parabolic_linear_W") {
+            len <- nrow(object$bootstrap_parameters)/length(unique(object$bootstrap_parameters$term))
+            bootstrap_Z <- rep(newdata$W-predict(object$Z_model, newdata=tibble(H=newdata$H)), len)
+            bootstrap_W <- rep(newdata$W, len)
+        }
+
+        predictions <- object$bootstrap_parameters %>% filter(term != "beta_1+beta_2") %>%
+            pivot_wider(names_from=term, values_from=value) %>%
+            slice(rep(1:n(),each=nrow(newdata))) %>%
+            mutate(H = rep_len(newdata$H, n()),
+                   W = bootstrap_W,
+                   Z = bootstrap_Z,
+                   remaining = 0,
+                   median = 0)
+
+        if(!("beta_3" %in% colnames(predictions))) predictions <- predictions %>% mutate(beta_3 = 0)
+        if(!("theta_2" %in% colnames(predictions))) predictions <- predictions %>% mutate(theta_2 = 0)
+        if("remaining" %in% colnames(newdata)) predictions <- predictions %>% mutate(remaining = rep_len(newdata$remaining, n()))
+
+        for(i in 1:nrow(predictions)) {
+            predictions$median[i] = object$fit_function(c(predictions$theta_0[i],
+                                                          predictions$theta_1[i],
+                                                          predictions$theta_2[i],
+                                                          predictions$beta_3[i]),
+                                                        H = predictions$H[i],
+                                                        Z = predictions$Z[i],
+                                                        H_0 = object$H_0)
+        }
+
+        print(predictions)
+
+        predictions <- predictions %>%
+            slice(rep(1:n(), times=n_prediction_samples)) %>%
+            mutate(prediction = median + sample(object$residuals,
+                                                 n(),
+                                                 replace=T)*
+                       object$sigma_function(object$mle['tau'][[1]], median)) %>%
+            group_by(H,Z,W, remaining) %>%
+            filter(exp(prediction) >= remaining) %>%
+            summarise(pred.lower = ifelse("remaining" %in% colnames(newdata), remaining, exp(quantile(prediction,0.025))),
+                      pred.upper = exp(quantile(prediction, if_else("remaining" %in% colnames(newdata),0.95,0.975))),
+                      conf.lower = exp(quantile(median,0.025)),
+                      conf.upper = exp(quantile(median, if_else("remaining" %in% colnames(newdata),0.95,0.975))),
+                      median = exp(quantile(prediction,0.5))) %>%
+            ungroup()
+
+        if(!("remaining" %in% colnames(newdata))) {
+            predictions <- predictions %>% mutate(median = exp(object$best_fit_function(H,Z)))
+        }
+
+        predictions <- predictions %>% select(H,W,remaining, median,pred.lower,pred.upper,conf.lower,conf.upper)
+
+        if(object$type != "parabolic_linear_W") predictions <- predictions %>% select(c(-W))
+        if(!("remaining" %in% colnames(newdata))) predictions <- predictions %>% select(c(-remaining))
+        else predictions <- predictions %>% select(c(-conf.lower,-conf.upper))
+
+        return(predictions)
     }
 
     filtering <- TRUE
     if("data.frame" %in% class(newdata)) filtering <- object$predictions$H %in% newdata$H
     else filtering <- object$predictions$H %in% newdata
     object$predictions %>% filter(filtering)
-}
-
-#' @export
-predict_remaining <- function(object, H, remaining, ...) {
-    if(class(object) != "sapwood_fit") stop("object must be of class 'sapwood_fit'")
-    if(length(H) != length(remaining)) stop("H and remaining not of same length")
-    prediction <- tibble()
-
-    bootstrap_medians <- object$bootstrap_medians %>% rename(HW = H)
-
-    for(i in 1:length(H)) {
-        print(H[i])
-        H_medians <- bootstrap_medians %>% filter(HW == H[i])
-        bootstrap_predictions <- tibble(HW=rep(H_medians$HW, each=100), value=rep(H_medians$value, each=100)) %>%
-                                 mutate(value = value + sample(residuals(object),
-                                                               1000*100,
-                                                               replace=T)*
-                                                                object$sigma_function(object$mle['tau'][[1]], object$fit_function(HW)))
-        row <- bootstrap_predictions %>% filter(HW == H[i], exp(value) >= remaining[i]) %>%
-                                                           group_by(HW) %>%
-                                                           summarise(remaining = remaining[i],
-                                                                     median = exp(quantile(value, 0.5)),
-                                                                     pred.upper = exp(quantile(value, 0.95)))
-        prediction <- prediction %>% bind_rows(row)
-    }
-
-    prediction
 }
 
 #' @export

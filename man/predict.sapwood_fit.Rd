@@ -4,7 +4,7 @@
 \alias{predict.sapwood_fit}
 \title{Prediction for sapwood rings}
 \usage{
-\method{predict}{sapwood_fit}(object, newdata = NULL, ...)
+\method{predict}{sapwood_fit}(object, newdata = NULL, confidence = 0.95, ...)
 }
 \arguments{
 \item{object}{an object of class "sapwood_fit", a result from a call to \code{sapwood_fit_l}, \code{sapwood_fit_pl} or \code{sapwood_fit_plw}.}
@@ -13,6 +13,7 @@
 }
 \description{
 Obtain predictions for a model of type 'sapwood_fit',
-including prediction and confidence intervals (for \code{sapwood_fit_l} and \code{sapwood_fit_pl}).
-For an object resulted in a \code{sapwood_fit_plw} call, only prediction median is included.
+including prediction and confidence intervals.
+Optionally, one can predict how many sapwood rings were in a sample
+that contains some remaining rings but not all.
 }

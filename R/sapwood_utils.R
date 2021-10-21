@@ -361,6 +361,7 @@ AIC.sapwood_fit <- function(object,...) {
 #' If omitted, the fitted values are used. If a column \code{remaining} is in the \code{newdata} tibble/data frame,
 #' it will be treated as remaining sapwood rings and the prediction interval will be based on that
 #' @param confidence Confidence level in prediction (1-alpha). Defaults to 0.95.
+#'
 #' @export
 predict.sapwood_fit <- function(object, newdata=NULL, confidence=0.95,...) {
     if(is.null(newdata) & confidence == 1-object$alpha) return(object$predictions)

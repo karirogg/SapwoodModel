@@ -352,8 +352,9 @@ AIC.sapwood_fit <- function(object,...) {
 #' Prediction for sapwood rings
 #'
 #' Obtain predictions for a model of type 'sapwood_fit',
-#' including prediction and confidence intervals (for \code{sapwood_fit_l} and \code{sapwood_fit_pl}).
-#' For an object resulted in a \code{sapwood_fit_plw} call, only prediction median is included.
+#' including prediction and confidence intervals.
+#' Optionally, one can predict how many sapwood rings were in a sample
+#' that contains some remaining rings but not all.
 #'
 #' @param object an object of class "sapwood_fit", a result from a call to \code{sapwood_fit_l}, \code{sapwood_fit_pl} or \code{sapwood_fit_plw}.
 #' @param newdata an optional data frame/tibble/vector in which to look for variables with which to predict. If omitted, the fitted values are used. If a column \code{remaining} is in the \code{newdata} tibble/data frame, it will be treated as remaining sapwood rings and the prediction interval will be based on that

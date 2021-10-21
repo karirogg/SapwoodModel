@@ -397,8 +397,6 @@ predict.sapwood_fit <- function(object, newdata=NULL,...) {
                                                         H_0 = object$H_0)
         }
 
-        print(predictions)
-
         predictions <- predictions %>%
             slice(rep(1:n(), times=n_prediction_samples)) %>%
             mutate(prediction = median + sample(object$residuals,

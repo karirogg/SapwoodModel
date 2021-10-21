@@ -258,8 +258,8 @@ sapwood_fit_raw <- function(formula = as.formula("S~H"),
     if(type != "parabolic_linear_W") {
         confidence_intervals_mu <- bootstrap_medians %>%
             group_by(H) %>%
-            summarise(conf.lower = inverse_transformation(quantile(value, 0.025)),
-                      conf.upper = inverse_transformation(quantile(value, 0.975)))
+            summarise(conf.lower = inverse_transformation(quantile(value, alpha/2)),
+                      conf.upper = inverse_transformation(quantile(value, 1-alpha/2)))
         for(i in 0:kmax) {
             H_medians <- bootstrap_medians %>% filter(H == i)
             bootstrap_predictions <- tibble(H=rep(H_medians$H, each=100), value=rep(H_medians$value, each=100)) %>%
@@ -359,8 +359,10 @@ AIC.sapwood_fit <- function(object,...) {
 #' @param object an object of class "sapwood_fit", a result from a call to \code{sapwood_fit_l}, \code{sapwood_fit_pl} or \code{sapwood_fit_plw}.
 #' @param newdata an optional data frame/tibble/vector in which to look for variables with which to predict. If omitted, the fitted values are used. If a column \code{remaining} is in the \code{newdata} tibble/data frame, it will be treated as remaining sapwood rings and the prediction interval will be based on that
 #' @export
-predict.sapwood_fit <- function(object, newdata=NULL,...) {
-    if(is.null(newdata)) return(object$predictions)
+predict.sapwood_fit <- function(object, newdata=NULL, confidence=0.95,...) {
+    if(is.null(newdata) & confidence == 1-object$alpha) return(object$predictions)
+
+    alpha <- 1-confidence
 
     if(object$type == "parabolic_linear_W" | "remaining" %in% colnames(newdata)) {
         n_samples <- 1000
@@ -406,10 +408,10 @@ predict.sapwood_fit <- function(object, newdata=NULL,...) {
                        object$sigma_function(object$mle['tau'][[1]], median)) %>%
             group_by(H,Z,W, remaining) %>%
             filter(exp(prediction) >= remaining) %>%
-            summarise(pred.lower = ifelse("remaining" %in% colnames(newdata), remaining, exp(quantile(prediction,0.025))),
-                      pred.upper = exp(quantile(prediction, if_else("remaining" %in% colnames(newdata),0.95,0.975))),
-                      conf.lower = exp(quantile(median,0.025)),
-                      conf.upper = exp(quantile(median, if_else("remaining" %in% colnames(newdata),0.95,0.975))),
+            summarise(pred.lower = ifelse("remaining" %in% colnames(newdata), remaining, exp(quantile(prediction,alpha/2))),
+                      pred.upper = exp(quantile(prediction, if_else("remaining" %in% colnames(newdata),1-alpha,1-alpha/2))),
+                      conf.lower = exp(quantile(median,alpha/2)),
+                      conf.upper = exp(quantile(median, if_else("remaining" %in% colnames(newdata),1-alpha,1-alpha/2))),
                       median = exp(quantile(prediction,0.5))) %>%
             ungroup()
 

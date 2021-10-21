@@ -10,6 +10,8 @@
 \item{object}{an object of class "sapwood_fit", a result from a call to \code{sapwood_fit_l}, \code{sapwood_fit_pl} or \code{sapwood_fit_plw}.}
 
 \item{newdata}{an optional data frame/tibble/vector in which to look for variables with which to predict. If omitted, the fitted values are used. If a column \code{remaining} is in the \code{newdata} tibble/data frame, it will be treated as remaining sapwood rings and the prediction interval will be based on that}
+
+\item{confidence}{Confidence level in prediction (1-alpha). Defaults to 0.95.}
 }
 \description{
 Obtain predictions for a model of type 'sapwood_fit',

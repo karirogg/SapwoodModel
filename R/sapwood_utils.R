@@ -361,11 +361,34 @@ AIC.sapwood_fit <- function(object,...) {
 #' @param confidence Confidence level in prediction (1-alpha). Defaults to 0.95.
 #' @export
 predict.sapwood_fit <- function(object, newdata=NULL, confidence=0.95,...) {
-    if(is.null(newdata) & confidence == 1-object$alpha) return(object$predictions)
+    if(is.null(newdata) & confidence == 1-object$alpha) {
+        return(object$predictions)
+    }
 
-    alpha <- 1-confidence
+    predictions_no_remaining <- newdata %>% filter(remaining == 0 | is.na(remaining)) %>%
+        select(-remaining) %>%
+        predict_util(object, ., confidence) %>%
+        mutate(remaining = 0)
 
-    if(object$type == "parabolic_linear_W" | "remaining" %in% colnames(newdata) | confidence != 1-object$alpha) {
+    predictions_remaining <- newdata %>% filter(remaining != 0 & !is.na(remaining)) %>%
+        predict_util(object, ., confidence)
+
+    predictions <- bind_rows(predictions_no_remaining,
+                             predictions_remaining)
+
+    newdata %>% left_join(predictions)
+}
+
+predict_util <- function(object, newdata=NULL, confidence=0.95) {
+    if((object$type == "parabolic_linear" | object$type == "linear") & !("remaining" %in% colnames(newdata)) & confidence == 1-object$alpha) {
+        filtering <- TRUE
+        if("data.frame" %in% class(newdata)) filtering <- object$predictions$H %in% newdata$H
+        else filtering <- object$predictions$H %in% newdata
+        return(filter(object$predictions, filtering))
+    }
+    else {
+        alpha <- 1-confidence
+
         n_samples <- 1000
         sample_size <- nrow(object$dat)
         n_prediction_samples <- 100
@@ -409,10 +432,10 @@ predict.sapwood_fit <- function(object, newdata=NULL, confidence=0.95,...) {
                        object$sigma_function(object$mle['tau'][[1]], median)) %>%
             group_by(H,Z,W, remaining) %>%
             filter(exp(prediction) >= remaining) %>%
-            summarise(pred.lower = ifelse("remaining" %in% colnames(newdata), remaining, exp(quantile(prediction,alpha/2))),
-                      pred.upper = exp(quantile(prediction, if_else("remaining" %in% colnames(newdata),1-alpha,1-alpha/2))),
+            summarise(pred.lower = ifelse(("remaining" %in% colnames(newdata)), remaining, exp(quantile(prediction,alpha/2))),
+                      pred.upper = exp(quantile(prediction, ifelse(("remaining" %in% colnames(newdata)),1-alpha,1-alpha/2))),
                       conf.lower = exp(quantile(median,alpha/2)),
-                      conf.upper = exp(quantile(median, if_else("remaining" %in% colnames(newdata),1-alpha,1-alpha/2))),
+                      conf.upper = exp(quantile(median, ifelse(("remaining" %in% colnames(newdata)),1-alpha,1-alpha/2))),
                       median = exp(quantile(prediction,0.5))) %>%
             ungroup()
 
@@ -428,11 +451,6 @@ predict.sapwood_fit <- function(object, newdata=NULL, confidence=0.95,...) {
 
         return(predictions)
     }
-
-    filtering <- TRUE
-    if("data.frame" %in% class(newdata)) filtering <- object$predictions$H %in% newdata$H
-    else filtering <- object$predictions$H %in% newdata
-    object$predictions %>% filter(filtering)
 }
 
 #' @export

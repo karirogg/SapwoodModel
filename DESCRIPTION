@@ -18,7 +18,8 @@ Imports:
     writexl,
     Hmisc,
     broom,
-    mosaic
+    mosaic,
+    tidyr
 Depends: 
     R (>= 3.60),
     ggplot2,
@@ -30,5 +31,6 @@ Depends:
     writexl,
     Hmisc,
     broom,
-    mosaic
+    mosaic,
+    tidyr
 RoxygenNote: 7.1.1

@@ -365,6 +365,10 @@ predict.sapwood_fit <- function(object, newdata=NULL, confidence=0.95,...) {
         return(object$predictions)
     }
 
+    if(!("remaining" %in% colnames(newdata))) {
+        newdata <- newdata %>% mutate(remaining == 0)
+    }
+
     predictions_no_remaining <- newdata %>% filter(remaining == 0 | is.na(remaining)) %>%
         select(-remaining) %>%
         predict_util(object, ., confidence) %>%

@@ -365,6 +365,7 @@ predict.sapwood_fit <- function(object, newdata=NULL, confidence=0.95,...) {
         return(object$predictions)
     }
 
+    if(!("data.frame" %in% class(newdata))) return(filter(object$predictions, object$predictions$H %in% newdata))
     if(!("remaining" %in% colnames(newdata))) {
         newdata <- newdata %>% mutate(remaining == 0)
     }
@@ -385,10 +386,7 @@ predict.sapwood_fit <- function(object, newdata=NULL, confidence=0.95,...) {
 
 predict_util <- function(object, newdata=NULL, confidence=0.95) {
     if((object$type == "parabolic_linear" | object$type == "linear") & !("remaining" %in% colnames(newdata)) & confidence == 1-object$alpha) {
-        filtering <- TRUE
-        if("data.frame" %in% class(newdata)) filtering <- object$predictions$H %in% newdata$H
-        else filtering <- object$predictions$H %in% newdata
-        return(filter(object$predictions, filtering))
+        return(filter(object$predictions, object$predictions$H %in% newdata$H))
     }
     else {
         alpha <- 1-confidence

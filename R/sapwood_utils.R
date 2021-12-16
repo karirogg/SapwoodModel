@@ -38,7 +38,7 @@ log_parabolic_estimate_W <- function(theta, H, H_0, Z) {
     log(exp(theta_0) + exp(theta_2)*H+exp(theta_1)*((H <= H_0)*(H-H^2/(2*H_0))+(H>H_0)*1/2*H_0) + beta_3*Z)
 }
 
-# Make sure data has constant variance on real scale
+# Make sure data has constant variance on real scale, see article
 sigma_i_function <- function(tau, mu) {
     sqrt(log(1/2+1/2*sqrt(1+4*exp(tau-2*mu))))
 }
@@ -258,18 +258,16 @@ sapwood_fit_raw <- function(formula = as.formula("S~H"),
     if(type != "parabolic_linear_W") {
         confidence_intervals_mu <- bootstrap_medians %>%
             group_by(H) %>%
-            summarise(conf.lower = inverse_transformation(quantile(value, alpha/2)),
-                      conf.upper = inverse_transformation(quantile(value, 1-alpha/2)))
+            summarise(conf.lower = round(inverse_transformation(quantile(value, alpha/2))),
+                      conf.upper = round(inverse_transformation(quantile(value, 1-alpha/2))))
         for(i in 0:kmax) {
             H_medians <- bootstrap_medians %>% filter(H == i)
             bootstrap_predictions <- tibble(H=rep(H_medians$H, each=100), value=rep(H_medians$value, each=100)) %>%
-                mutate(value = value + sample(residuals,
-                                              n_samples*n_prediction_samples,
-                                              replace=T)*
-                           sigma_function(tau, best_fit_function(H))) %>%
+                mutate(log_prediction = rnorm(n(), value, sigma_function(tau, best_fit_function(H))),
+                       prediction = round(exp(log_prediction))) %>%
                 group_by(H) %>%
-                summarise(pred.lower = exp(quantile(value, alpha/2)),
-                          pred.upper = exp(quantile(value, 1-alpha/2)))
+                summarise(pred.lower = quantile(prediction, alpha/2),
+                          pred.upper = quantile(prediction, 1-alpha/2))
             prediction_intervals <- prediction_intervals %>% bind_rows(bootstrap_predictions)
         }
 
@@ -362,12 +360,12 @@ AIC.sapwood_fit <- function(object,...) {
 #' @export
 predict.sapwood_fit <- function(object, newdata=NULL, confidence=0.95,...) {
     if(is.null(newdata) & confidence == 1-object$alpha) {
-        return(object$predictions)
+        return(mutate(object$predictions,median = round(median)))
     }
 
     if(!("data.frame" %in% class(newdata))) return(filter(object$predictions, object$predictions$H %in% newdata))
     if(!("remaining" %in% colnames(newdata))) {
-        newdata <- newdata %>% mutate(remaining == 0)
+        newdata <- newdata %>% mutate(remaining = 0)
     }
 
     predictions_no_remaining <- newdata %>% filter(remaining == 0 | is.na(remaining)) %>%
@@ -428,21 +426,20 @@ predict_util <- function(object, newdata=NULL, confidence=0.95) {
 
         predictions <- predictions %>%
             slice(rep(1:n(), times=n_prediction_samples)) %>%
-            mutate(prediction = median + sample(object$residuals,
-                                                n(),
-                                                replace=T)*
-                       object$sigma_function(object$mle['tau'][[1]], median)) %>%
+            mutate(sigma_i = object$sigma_function(object$mle['tau'][[1]], median),
+                   log_prediction = rnorm(n(), median, sigma_i),
+                   prediction = round(exp(log_prediction))) %>%
             group_by(H,Z,W, remaining) %>%
-            filter(exp(prediction) >= remaining) %>%
-            summarise(pred.lower = ifelse(("remaining" %in% colnames(newdata)), remaining, exp(quantile(prediction,alpha/2))),
-                      pred.upper = exp(quantile(prediction, ifelse(("remaining" %in% colnames(newdata)),1-alpha,1-alpha/2))),
-                      conf.lower = exp(quantile(median,alpha/2)),
-                      conf.upper = exp(quantile(median, ifelse(("remaining" %in% colnames(newdata)),1-alpha,1-alpha/2))),
-                      median = exp(quantile(prediction,0.5))) %>%
+            filter(prediction >= remaining) %>%
+            summarise(pred.lower = quantile(prediction, alpha/2),
+                      pred.upper = quantile(prediction, 1-alpha/2),
+                      conf.lower = round(exp(quantile(median,alpha/2))),
+                      conf.upper = round(exp(quantile(median,1-alpha/2))),
+                      median = round(quantile(prediction,0.5))) %>%
             ungroup()
 
         if(!("remaining" %in% colnames(newdata))) {
-            predictions <- predictions %>% mutate(median = exp(object$best_fit_function(H,Z)))
+            predictions <- predictions %>% mutate(median = round(exp(object$best_fit_function(H,Z))))
         }
 
         predictions <- predictions %>% select(H,W,remaining, median,pred.lower,pred.upper,conf.lower,conf.upper)

@@ -4,7 +4,7 @@
 \alias{summary.sapwood_fit}
 \title{Summary method for sapwood fits}
 \usage{
-\method{summary}{sapwood_fit}(object, ...)
+\method{summary}{sapwood_fit}(object)
 }
 \arguments{
 \item{object}{an object of class "sapwood_fit", a result from a call to \code{sapwood_fit_l}, \code{sapwood_fit_pl} or \code{sapwood_fit_plw}.}

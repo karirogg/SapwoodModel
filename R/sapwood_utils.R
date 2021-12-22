@@ -82,6 +82,8 @@ log_likelihood_vectorized <- function(theta_matrix, ...) {
 
 
 # Plot QQ plot with confidence intervals
+#' @importFrom ggplot2 ggplot aes geom_point geom_line xlab ylab coord_cartesian
+#' @importFrom stats qbeta qnorm
 normalqqplot <- function(x){
     alpha <- 0.05
     n <- length(x)
@@ -105,6 +107,10 @@ normalqqplot <- function(x){
 }
 
 # Fit data with model, return plots, predictions, parameter CI and model performance
+#' @importFrom stats as.formula quantile rnorm lm nlminb
+#' @importFrom dplyr %>% rename mutate filter tibble bind_rows as_tibble group_by summarise n inner_join arrange select left_join if_else
+#' @importFrom utils head
+#' @importFrom stringr str_detect
 sapwood_fit_raw <- function(formula = as.formula("S~H"),
                             type = "parabolic_linear",
                             dat,
@@ -115,8 +121,7 @@ sapwood_fit_raw <- function(formula = as.formula("S~H"),
                             transformation = function(x){x},
                             inverse_transformation = function(x){x},
                             H_0,
-                            sigma_function = function(tau,mu){exp(tau)},
-                            is_shiny = F, ...) {
+                            sigma_function = function(tau,mu){exp(tau)}, ...) {
     formula_args <- all.vars(formula)
 
 
@@ -196,8 +201,7 @@ sapwood_fit_raw <- function(formula = as.formula("S~H"),
 
     for(i in 1:n_samples) {
         if(i %% floor(n_samples/100) == 0) {
-            if(is_shiny) incProgress(1/100)
-            else cat("|")
+            cat("|")
         }
 
         # Sampling
@@ -223,16 +227,6 @@ sapwood_fit_raw <- function(formula = as.formula("S~H"),
                                 regularization_term = regularization_term,
                                 H_0 = H_0,
                                 ...)
-
-        # if(type != "parabolic_linear_W") {
-        #     bootstrap_predictions[(1+(i-1)*n_prediction_samples*(kmax+1)):(i*n_prediction_samples*(kmax+1))] =
-        #         fit_function(head(unlist(bootstrap_fit$par),-1),
-        #                      bootstrap_prediction_H,
-        #                      H_0,
-        #                      0) +
-        #         residuals[sample(1:nrow(dat),size = n_prediction_samples*(kmax+1), replace=T)]*
-        #         sigma_function(tau, fit_function(unlist(fit$par), bootstrap_prediction_H, H_0, 0))
-        # }
 
         bootstrap_medians <-  bootstrap_medians %>%
             bind_rows(tibble(H=0:kmax,
@@ -358,7 +352,9 @@ AIC.sapwood_fit <- function(object,...) {
 #' @param newdata an optional data frame/tibble/vector in which to look for variables with which to predict. If omitted, the fitted values are used. If a column \code{remaining} is in the \code{newdata} tibble/data frame, it will be treated as remaining sapwood rings and the prediction interval will be based on that
 #' @param confidence Confidence level in prediction (1-alpha). Defaults to 0.95.
 #' @export
-predict.sapwood_fit <- function(object, newdata=NULL, confidence=0.95,...) {
+#' @importFrom dplyr mutate filter %>% select bind_rows left_join
+#' @importFrom stats median
+predict.sapwood_fit <- function(object, newdata=NULL, confidence=0.95) {
     if(is.null(newdata) & confidence == 1-object$alpha) {
         return(mutate(object$predictions,median = round(median)))
     }
@@ -382,6 +378,9 @@ predict.sapwood_fit <- function(object, newdata=NULL, confidence=0.95,...) {
     newdata %>% left_join(predictions)
 }
 
+#' @importFrom dplyr %>% filter tibble slice n mutate group_by summarise ungroup select if_else rename
+#' @importFrom tidyr pivot_wider
+#' @importFrom stats median rnorm quantile
 predict_util <- function(object, newdata=NULL, confidence=0.95) {
     if((object$type == "parabolic_linear" | object$type == "linear") & !("remaining" %in% colnames(newdata)) & confidence == 1-object$alpha) {
         return(filter(object$predictions, object$predictions$H %in% newdata$H))
@@ -458,12 +457,12 @@ residuals.sapwood_fit <- function(object,...) {
 }
 
 #' @export
-print.sapwood_fit <- function(object,...) {
-    cat(paste0(" ",class(object), " - Call:\n\n"),
-        if_else(object$type == "parabolic_linear", "Linear-parabolic model (no mean TRW), Model 2\n\n",
-                if_else(object$type == "linear", "Linear model (no mean TRW), Model 3\n\n",
+print.sapwood_fit <- function(x,...) {
+    cat(paste0(" ",class(x), " - Call:\n\n"),
+        if_else(x$type == "parabolic_linear", "Linear-parabolic model (no mean TRW), Model 2\n\n",
+                if_else(x$type == "linear", "Linear model (no mean TRW), Model 3\n\n",
                         "Linear-parabolic model, using mean TRW, Model 1\n\n")),
-        paste(deparse(object$formula), collapse = "\n"))
+        paste(deparse(x$formula), collapse = "\n"))
 }
 
 #' Summary method for sapwood fits
@@ -472,7 +471,7 @@ print.sapwood_fit <- function(object,...) {
 #'
 #' @param object an object of class "sapwood_fit", a result from a call to \code{sapwood_fit_l}, \code{sapwood_fit_pl} or \code{sapwood_fit_plw}.
 #' @export
-summary.sapwood_fit <- function(object,...) {
+summary.sapwood_fit <- function(object) {
     cat(paste0(" ",class(object), " - Call:\n\n"),
         if_else(object$type == "parabolic_linear", "Linear-parabolic model (no mean TRW), Model 2\n\n",
                 if_else(object$type == "linear", "Linear model (no mean TRW), Model 3\n\n",
@@ -480,7 +479,7 @@ summary.sapwood_fit <- function(object,...) {
         paste(deparse(object$formula), collapse = "\n"),
         "\n\n",
         "AIC:",
-        AIC(object),
+        AIC.sapwood_fit(object),
         "\n\n",
         "Coefficients:\n")
     print(object$parameter_CI)
@@ -509,6 +508,9 @@ summary.sapwood_fit <- function(object,...) {
 #' plot(fit, type="residual")
 #' plot(fit, type="qq")
 #' @export
+#' @importFrom ggplot2 ggplot aes geom_point geom_line xlab ylab coord_cartesian theme_set theme scale_x_continuous scale_y_continuous theme_classic geom_hline
+#' @importFrom dplyr %>% tibble
+#' @importFrom stats qnorm
 plot.sapwood_fit <- function(object, type='fit', xlim=NULL, ylim=NULL, prediction=T, confidence=F) {
     if(object$type == "parabolic_linear_W")
         stop("Not possible to plot model, use type='parabolic_linear' or type='linear' instead.")

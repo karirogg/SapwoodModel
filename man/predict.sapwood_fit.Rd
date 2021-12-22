@@ -4,7 +4,7 @@
 \alias{predict.sapwood_fit}
 \title{Prediction for sapwood rings}
 \usage{
-\method{predict}{sapwood_fit}(object, newdata = NULL, confidence = 0.95, ...)
+\method{predict}{sapwood_fit}(object, newdata = NULL, confidence = 0.95)
 }
 \arguments{
 \item{object}{an object of class "sapwood_fit", a result from a call to \code{sapwood_fit_l}, \code{sapwood_fit_pl} or \code{sapwood_fit_plw}.}

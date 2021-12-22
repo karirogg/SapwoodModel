@@ -1,37 +1,20 @@
 Package: SapwoodModel
 Type: Package
-Title: Prediction models for sapwood rings in Scots pine
+Title: Sapwood model
 Version: 1.0.0
-Author: Kári Rögnvaldsson
+Author: Kari Rognvaldsson
 Language: en-US
-Maintainer: Kári Rögnvaldsson <karirogg@gmail.com>
-Description: test
+Maintainer: Kari Rognvaldsson <karirogg@gmail.com>
+Description: Prediction models for sapwood rings in Scots pine
 License: None
 Encoding: UTF-8
 LazyData: true
-Imports:
-    ggplot2,
-    dplyr,
-    stringr,
-    here,
-    patchwork,
-    readxl,
-    writexl,
-    Hmisc,
-    broom,
-    mosaic,
-    tidyr
 Depends: 
     R (>= 3.60),
     ggplot2,
     dplyr,
     stringr,
-    here,
-    patchwork,
-    readxl,
-    writexl,
     Hmisc,
-    broom,
-    mosaic,
+    here,
     tidyr
 RoxygenNote: 7.1.1

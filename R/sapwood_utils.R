@@ -1,13 +1,7 @@
 library(dplyr)
 library(ggplot2)
 library(here)
-library(patchwork)
-library(readxl)
-library(writexl)
-library(moments)
 library(Hmisc)
-library(broom)
-library(mosaic)
 library(stringr)
 library(tidyr)
 

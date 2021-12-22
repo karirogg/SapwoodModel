@@ -17,11 +17,11 @@ devtools::install_github("karirogg/sapwood_scots_pine")
 ### Getting started
 Get to know the package by trying to fit your first model to the data. Fetch some data by calling
 ```
-data(dat_TA)
+data(smaland)
 ```
 and run the model with:
 ```
-model <- sapwood_fit_pl(S~H, dat_TA)
+model <- sapwood_fit_pl(S~H, smaland)
 ```
 Note that `sapwood_fit_pl` can be replaced with `sapwood_fit_l` or `sapwood_fit_plw` (see `?sapwood_fit` for usage documentation).
 

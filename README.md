@@ -11,7 +11,7 @@ This software package fits a model to sapwood data from scots pine (Pinus sylves
 ### Installation
 ```
 # Install development version from GitHub
-devtools::install_github("karirogg/sapwood_scots_pine")
+devtools::install_github("karirogg/SapwoodModel")
 ```
 
 ### Getting started

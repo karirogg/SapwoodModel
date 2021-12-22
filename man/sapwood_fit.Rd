@@ -77,8 +77,8 @@ The functions return objects of class "sapwood_fit". An object of class "sapwood
 The function takes in heartwood and sapwood (and possibly tree ring width) data from a dataset and returns a fit and some information about the fit, such as prediction intervals, figures, confidence intervals for parameters etc. See Edvardsson et al.
 }
 \examples{
-data(dat_TA)
-fit <- sapwood_fit_pl(S~H, dat_TA)
+data(smaland)
+fit <- sapwood_fit_pl(S~H, smaland)
 summary(fit)
 plot(fit)
 plot(fit, type="residual")

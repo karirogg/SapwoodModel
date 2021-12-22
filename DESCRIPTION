@@ -1,7 +1,7 @@
 Package: SapwoodModel
 Type: Package
 Title: Prediction models for sapwood rings in Scots pine
-Version: 0.1.0
+Version: 1.0.0
 Author: Kári Rögnvaldsson
 Maintainer: Kári Rögnvaldsson <karirogg@gmail.com>
 Description: test

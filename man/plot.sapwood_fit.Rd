@@ -33,8 +33,8 @@
 Visualize sapwood model.
 }
 \examples{
-data(dat_TA)
-fit <- sapwood_fit_pl(S~H, dat_TA)
+data(smaland)
+fit <- sapwood_fit_pl(S~H, smaland)
 plot(fit, xlim=c(0,220), ylim=c(0,150))
 plot(fit)
 plot(fit, type="residual")

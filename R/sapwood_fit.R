@@ -28,8 +28,8 @@
 #'
 #' #' @seealso \code{\link{summary.sapwood_fit}} for summaries, \code{\link{predict.sapwood_fit}} for prediction. It is also useful to look at \code{\link{plot.sapwood_fit}} to help visualize the model.
 #' @examples
-#' data(dat_TA)
-#' fit <- sapwood_fit_pl(S~H, dat_TA)
+#' data(smaland)
+#' fit <- sapwood_fit_pl(S~H, smaland)
 #' summary(fit)
 #' plot(fit)
 #' plot(fit, type="residual")

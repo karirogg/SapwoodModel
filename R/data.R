@@ -8,7 +8,7 @@
 #'   \item{W}{Mean tree ring width of heartwood}
 #'   \item{S}{Number of sapwood rings}
 #' }
-#' @source <https://github.com/karirogg/ScotsPine>
+#' @source <https://github.com/karirogg/SapwoodModel>
 "smaland"
 
 #' @title Sapwood statistics from Sweden
@@ -21,7 +21,7 @@
 #'   \item{S}{Number of sapwood rings}
 #'   \item{W}{Mean tree ring width of heartwood}
 #' }
-#' @source <https://github.com/karirogg/ScotsPine>
+#' @source <https://github.com/karirogg/SapwoodModel>
 "varmland"
 
 #' @title Sapwood statistics from Sweden
@@ -34,5 +34,5 @@
 #'   \item{S}{Number of sapwood rings}
 #'   \item{W}{Mean tree ring width of heartwood}
 #' }
-#' @source <https://github.com/karirogg/ScotsPine>
+#' @source <https://github.com/karirogg/SapwoodModel>
 "uppland"

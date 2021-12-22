@@ -17,6 +17,7 @@ devtools::install_github("karirogg/SapwoodModel")
 ### Getting started
 Get to know the package by trying to fit your first model to the data. Fetch some data by calling
 ```
+library(SapwoodModel)
 data(smaland)
 ```
 and run the model with:
@@ -29,7 +30,7 @@ From here, you can see some information about the fit by running
 ```
 summary(model)
 plot(model)
-predict(model, 220:300)
+predict(model, tibble(H = c(220,300), remaining = c(60,0)))
 model$parameter_CI
 ```
 

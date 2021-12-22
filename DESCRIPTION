@@ -3,6 +3,7 @@ Type: Package
 Title: Prediction models for sapwood rings in Scots pine
 Version: 1.0.0
 Author: Kári Rögnvaldsson
+Language: en-US
 Maintainer: Kári Rögnvaldsson <karirogg@gmail.com>
 Description: test
 License: None

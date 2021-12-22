@@ -1,4 +1,4 @@
-## Sapwood rating curves
+## SapwoodModel
 
 This software package fits a model to sapwood data from scots pine (Pinus sylvestris L.) using heartwood data and tree ring width using a nonlinear model described in Edvardsson et al. (2021). Three models are implemented:
 

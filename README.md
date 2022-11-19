@@ -38,4 +38,7 @@ and more (see `?plot.sapwood_fit`, `?predict.sapwood_fit` etc.)
 
 
 ### References
-Edvardsson et. al.
+Edvardsson, J., Rögnvaldsson, K., Helgadóttir, E. Þ., Linderson, H., & Hrafnkelsson, B. (2022). A statistical
+model for the prediction of the number of sapwood rings in scots pine (pinus sylvestris l.)
+Dendrochronologia, 74, 125963. https://doi.org/10.1016/j.dendro.2022.125963
+
